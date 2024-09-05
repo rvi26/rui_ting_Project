@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Bookings Data</title>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+        <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/css/bootstrap.min.css" rel="stylesheet">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/js/bootstrap.bundle.min.js"></script>
+        <style>
+            .hero-image {
+                background-size: cover;
+                height: 100px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: black;
+                text-align: center;
+            }
+            .button-container {
+                text-align: center;
+                margin-top: 20px;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="booking-banner" class="hero-image">
+            <h2>Facility Bookings</h2>
+        </div>
+
+        <div id="booking-table-container" class="container mt-5">
+            <table id="bookings-table" class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Booking ID</th>
+                        <th>Facility Description</th>
+                        <th>Booking Date From</th>
+                        <th>Booking Date To</th>
+                        <th>Booked By</th>
+                        <th>Booking Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Booking data will be inserted here -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Button container for Create and Logout buttons -->
+        <div class="button-container">
+            <button class="btn btn-primary" onclick="createBooking()">Create</button> |
+            <button class="btn btn-secondary" onclick="logout()">Log Out</button>
+        </div>
+
+        <!-- Update Booking Modal -->
+        <div class="modal fade" id="updateModal" tabindex="-1" aria-labelledby="updateModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="updateModalLabel">Update Booking</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="update-form">
+                            <input type="hidden" id="update-booking-ID">
+                            <div class="mb-3">
+                                <label for="update-facility-Description" class="form-label">Facility Description</label>
+                                <select class="form-control" id="update-facility-Description" required>
+                                    <option value="--please select one--">-- please select one --</option>    
+                                    <option value="DIY Bracelets Room">DIY Bracelets Room</option>
+                                    <option value="Flower Wrapping Room">Flower Wrapping Room</option>
+                                    <option value="Photo-Taking Room">Photo-Taking Room</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="update-booking-Date-From" class="form-label">Booking Date From</label>
+                                <input type="date" class="form-control" id="update-booking-Date-From" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="update-booking-Date-To" class="form-label">Booking Date To</label>
+                                <input type="date" class="form-control" id="update-booking-Date-To" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="update-booked-By" class="form-label">Booked By</label>
+                                <input type="text" class="form-control" id="update-booked-By" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="update-booking-Status" class="form-label">Booking Status</label>
+                                <select class="form-control" id="update-booking-Status" required>
+                                    <option value="Pending">Pending</option>
+                                    <option value="Confirmed">Confirmed</option>
+                                    <option value="Completed">Completed</option>
+                                    <option value="Cancelled">Cancelled</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Update Booking</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            function generateBookingTable(bookingInfo) {
+                let tableInfoHTML = "";
+                for (let i = 0; i < bookingInfo.length; i++) {
+                    tableInfoHTML += `<tr>
+                        <td>${bookingInfo[i].booking_ID}</td>
+                        <td>${bookingInfo[i].facility_Description}</td>
+                        <td>${bookingInfo[i].booking_Date_From}</td>
+                        <td>${bookingInfo[i].booking_Date_To}</td>
+                        <td>${bookingInfo[i].booked_By}</td>
+                        <td>${bookingInfo[i].booking_Status}</td>
+                        <td>
+                            <button class="btn btn-warning" onclick='openUpdateModal(${JSON.stringify(bookingInfo[i])})'>Update</button>
+                            <button class="btn btn-danger" onclick='deleteBookingByID(${bookingInfo[i].booking_ID})'>Delete</button>
+                        </td>
+                    </tr>`;
+                }
+
+                document.querySelector("#bookings-table tbody").innerHTML = tableInfoHTML;
+            }
+
+            // Define the logout function
+            function logout() {
+                localStorage.removeItem('token'); // Remove the token
+                alert('You have been logged out.');
+                window.location.href = 'login.html'; // Redirect to the login page
+            }
+
+            // Define the createBooking function
+            function createBooking() {
+                window.location.href = 'booking.html'; // Redirect to the booking page
+            }
+
+            function fetchBookings() {
+                var controllerURL = 'https://localhost:7048/api/Bookings/Getall';
+
+                const token = localStorage.getItem('token');
+                if (!token) {
+                    console.error('Authorization token not found.');
+                    alert('You are not authorized. Please log in again.');
+                    return;
+                }
+
+                var xhttp = new XMLHttpRequest();
+
+                xhttp.onreadystatechange = function() {
+                    if (this.readyState === 4) {
+                        if (this.status === 200) {
+                            try {
+                                var bookingInfo = JSON.parse(this.responseText);
+                                generateBookingTable(bookingInfo);
+                            } catch (e) {
+                                console.error('Error parsing JSON:', e);
+                                alert('Error parsing bookings data. Please try again later.');
+                            }
+                        } else {
+                            console.error('Error fetching bookings:', this.status, this.statusText, this.responseText);
+                            alert('Error fetching bookings. Please try again later.');
+                        }
+                    }
+                };
+
+                xhttp.open("GET", controllerURL, true);
+                xhttp.setRequestHeader('Authorization', 'Bearer ' + token);
+                xhttp.send();
+            }
+
+            function openUpdateModal(booking) {
+                document.getElementById('update-booking-ID').value = booking.booking_ID;
+                document.getElementById('update-facility-Description').value = booking.facility_Description;
+                document.getElementById('update-booking-Date-From').value = booking.booking_Date_From;
+                document.getElementById('update-booking-Date-To').value = booking.booking_Date_To;
+                document.getElementById('update-booked-By').value = booking.booked_By;
+                document.getElementById('update-booking-Status').value = booking.booking_Status;
+
+                const updateModal = new bootstrap.Modal(document.getElementById('updateModal'));
+                updateModal.show();
+            }
+
+            function deleteBookingByID(booking_ID) {
+                let isSure = confirm("Are you sure you want to delete this booking?");
+
+                if (isSure) {
+                    var controllerURL = `https://localhost:7048/api/Bookings/${booking_ID}`;
+                
+                    var xhr = new XMLHttpRequest();
+                    xhr.open("DELETE", controllerURL, true);
+
+                    const token = localStorage.getItem('token');
+                    if (token) {
+                        xhr.setRequestHeader('Authorization', 'Bearer ' + token);
+                    } else {
+                        console.error('Authorization token not found.');
+                        alert('You are not authorized. Please log in again.');
+                        return;
+                    }
+
+                    xhr.onreadystatechange = function() {
+                        if (xhr.readyState === XMLHttpRequest.DONE) {
+                            if (xhr.status >= 200 && xhr.status < 300) {
+                                alert('Booking deleted successfully!');
+                                fetchBookings(); // Refresh the table
+                            } else {
+                                console.error('Error deleting booking:', xhr.statusText);
+                                alert(`Error deleting booking:\nStatus: ${xhr.status}\nResponse: ${xhr.responseText}`);
+                            }
+                        }
+                    };
+
+                    xhr.send(); // No body needed for DELETE request
+                }
+            }
+
+            document.getElementById('update-form').addEventListener('submit', function(event) {
+                event.preventDefault(); // Prevent the default form submission
+
+                const booking_ID = document.getElementById('update-booking-ID').value;
+                const formData = {
+                    booking_ID: booking_ID,
+                    facility_Description: document.getElementById('update-facility-Description').value,
+                    booking_Date_From: document.getElementById('update-booking-Date-From').value,
+                    booking_Date_To: document.getElementById('update-booking-Date-To').value,
+                    booked_By: document.getElementById('update-booked-By').value,
+                    booking_Status: document.getElementById('update-booking-Status').value
+                };
+
+                const jsonData = JSON.stringify(formData);
+
+                const xhr = new XMLHttpRequest();
+                xhr.open('PUT', `https://localhost:7048/api/Bookings/${booking_ID}`, true);
+                xhr.setRequestHeader('Content-Type', 'application/json');
+
+                const token = localStorage.getItem('token');
+                if (token) {
+                    xhr.setRequestHeader('Authorization', 'Bearer ' + token);
+                } else {
+                    console.error('Authorization token not found.');
+                    alert('You are not authorized. Please log in again.');
+                    return;
+                }
+
+                xhr.onreadystatechange = function() {
+                    if (xhr.readyState === XMLHttpRequest.DONE) {
+                        if (xhr.status >= 200 && xhr.status < 300) {
+                            alert('Booking updated successfully!');
+                            window.location.href = 'index.html'; // Redirect to index.html after successful update
+                        } else {
+                            console.error('Error updating booking:', xhr.statusText);
+                            alert(`Error updating booking:\nStatus: ${xhr.status}\nResponse: ${xhr.responseText}`);
+                        }
+                    }
+                };
+
+                xhr.send(jsonData);
+            });
+
+            window.onload = function() {
+                fetchBookings();
+            };
+        </script>
+    </body>
+</html>
